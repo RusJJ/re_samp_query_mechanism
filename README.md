@@ -1,5 +1,5 @@
 # re_samp_query_mechanism
-SA:MP Query Mechanism
+SA:MP Query Mechanism with Linux support
 
 ```C++
 auto sqm = c_sqm::singleton();

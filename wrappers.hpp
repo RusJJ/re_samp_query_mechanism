@@ -15,6 +15,7 @@ public:
 	template<typename T>
 	T read_num(std::streampos pos = -1)
 	{
+		if (_ss->str().empty()) return 0;
 		T result;
 		if (pos != -1) {
 			_ss->seekg(pos);

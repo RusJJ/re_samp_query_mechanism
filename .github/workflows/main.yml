@@ -25,8 +25,14 @@ jobs:
     - name: Build the code...
       run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk NDK_DEBUG=0 -j12
 
-    - name: Upload the mod!
+    - name: Upload static libs
       uses: actions/upload-artifact@v3
       with:
-        name: compiled-mod.zip
+        name: static-libs.zip
         path: ./obj/local/*/*.a
+        
+    - name: Upload shared libs
+      uses: actions/upload-artifact@v3
+      with:
+        name: shared-libs.zip
+        path: ./libs

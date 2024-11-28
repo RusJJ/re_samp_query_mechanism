@@ -46,9 +46,7 @@ struct s_server_info : private c_fast_reader
 
 	s_server_info(std::stringstream &ss)
 	{
-		ss.seekg(11); // set read cursor to 11 byte
-		// why 11 bytes?: https://sampwiki.blast.hk/wiki/Query#Recieving_the_packets
-		
+		ss.seekg(11);
 		set_stream(ss);
 		is_locked = read_num<uint8_t>();
 		players = read_num<uint16_t>();
@@ -101,10 +99,65 @@ struct s_player_list : private c_fast_reader
 		ss.seekg(11);
 		set_stream(ss);
 		uint16_t players_count = read_num<uint16_t>();
-		for (uint16_t i = 0; i < players_count; ++i) {
+		if(players_count >= 100) return; // the server will not return anything, anyway
+		for (uint16_t i = 0; i < players_count; ++i)
+		{
 			std::string name = read_str<uint8_t>();
 			int score = read_num<int>();
 			players.emplace(name, score);
 		}
+	}
+};
+
+struct s_detailed_player_list : private c_fast_reader
+{
+	struct s_player_detail
+	{
+		uint8_t id;
+		int score;
+		int ping;
+	};
+
+	s_player_detail* details_list;
+	std::map<std::string, s_player_detail*> players;
+
+	s_detailed_player_list(std::stringstream &ss)
+	{
+		ss.seekg(11);
+		set_stream(ss);
+
+		int currentDetail = 0;
+		uint16_t players_count = read_num<uint16_t>();
+		if(players_count >= 100) return; // the server will not return anything, anyway
+
+		details_list = new s_player_detail[players_count];
+		for (uint16_t i = 0; i < players_count; ++i)
+		{
+			std::string name = read_str<uint8_t>();
+			details_list[currentDetail].id = read_num<uint8_t>();
+			details_list[currentDetail].score = read_num<int>();
+			details_list[currentDetail].ping = read_num<int>();
+			players.emplace(name, &details_list[currentDetail]);
+			++currentDetail;
+		}
+	}
+	~s_detailed_player_list()
+	{
+		delete[](details_list);
+	}
+};
+
+struct s_pseudo_random : private c_fast_reader
+{
+	uint8_t numbers[4];
+
+	s_pseudo_random(std::stringstream &ss)
+	{
+		ss.seekg(11);
+		set_stream(ss);
+		numbers[0] = read_num<uint8_t>();
+		numbers[1] = read_num<uint8_t>();
+		numbers[2] = read_num<uint8_t>();
+		numbers[3] = read_num<uint8_t>();
 	}
 };

@@ -1,18 +1,18 @@
 #pragma once
 
 #ifdef _WIN32
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#include <WinSock2.h>
-#include <WS2tcpip.h>
+	#define _WINSOCK_DEPRECATED_NO_WARNINGS
+	#include <WinSock2.h>
+	#include <WS2tcpip.h>
 
-#pragma comment(lib, "Ws2_32.lib")
+	#pragma comment(lib, "Ws2_32.lib")
 #else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
+	#include <sys/socket.h>
+	#include <arpa/inet.h>
+	#include <sys/ioctl.h>
+	#include <unistd.h>
 
-#define SOCKET int
+	#define SOCKET int
 #endif
 
 #include <sstream>
@@ -25,15 +25,21 @@ enum e_query_type: uint8_t
 	QUERYTYPE_SERVERINFO = 'i',
 	QUERYTYPE_SERVERRULES = 'r',
 	QUERYTYPE_SERVERPING = 'p',
-	QUERYTYPE_PLAYERLIST = 'c'
+	QUERYTYPE_PLAYERLIST = 'c',
+	QUERYTYPE_DETAILPLAYERLIST = 'd',
+	QUERYTYPE_PSEUDORANDOM = 'p',
+
+	QUERYTYPES_COUNT = 6
 };
 
 class c_sqm
 {
+private:
 	SOCKET _socket;
 	sockaddr _address;
 	const char *_ip;
 	u_short _port;
+
 public:
 	static c_sqm *singleton()
 	{
@@ -42,7 +48,7 @@ public:
 	}
 
 	/*
-	*	Initialize WinSock2
+	*	Initialize connection socket
 	*/
 	void initialize(const char *ip, u_short port)
 	{
@@ -51,7 +57,14 @@ public:
 		WSADATA wsa_data;
 		result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
 		if (result != 0)
+		{
+#ifdef __cpp_exceptions
 			throw std::runtime_error("Failed to initiates WinSock.");
+#else
+			return;
+#endif
+		}
+		
 #endif
 		sockaddr_in address;
 		address.sin_family = AF_INET;
@@ -60,7 +73,13 @@ public:
 
 		_socket = socket(address.sin_family, SOCK_DGRAM, IPPROTO_UDP);
 		if (_socket == -1)
+		{
+#ifdef __cpp_exceptions
 			throw std::runtime_error("Failed to create socket.");
+#else
+			return;
+#endif
+		}
 
 		u_long param = 1;
 #ifdef _WIN32
@@ -69,7 +88,13 @@ public:
 		result = ioctl(_socket, FIONBIO, &param);
 #endif
 		if (result < 0)
+		{
+#ifdef __cpp_exceptions
 			throw std::runtime_error("Failed to set socket non-blocking.");
+#else
+			return;
+#endif
+		}
 
 		_address = reinterpret_cast<sockaddr&>(address);
 		_ip = ip;
@@ -87,13 +112,14 @@ public:
     }
 
 	/*
-	*	Translate IP to bytes
+	*	Translate IP to bytes (for the Query)
 	*/
 	std::string translate_ip(std::string ip)
 	{
 		std::string result, part;
 		std::stringstream it(ip);
-		while (std::getline(it, part, '.')) {
+		while (std::getline(it, part, '.'))
+		{
 			result += atoi(part.c_str());
 		}
 		return result;
@@ -116,7 +142,7 @@ public:
 	}
 
 	/*
-	*	Waiting for response from server
+	*	Waiting for response from server (1s timeout should be enough for ping < 500)
 	*/
 	std::stringstream receive(int timeout)
 	{
@@ -129,12 +155,13 @@ public:
 		while (time(0) - start_time < timeout)
 		{
 #ifdef _WIN32
-			Sleep(1);
+			Sleep(1); // 1ms
 #else
-			usleep(1000);
+			usleep(1000); // 1ms
 #endif
 			int received_bytes = recvfrom(_socket, buffer, sizeof(buffer), 0, &from, &from_length);
-			if (received_bytes > 11) {
+			if (received_bytes > 11)
+			{
 				packet = std::stringstream(std::string(buffer, received_bytes));
 				start_time = time(0);
 			}

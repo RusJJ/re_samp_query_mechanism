@@ -15,22 +15,7 @@
 	#define SOCKET int
 #endif
 
-#include <sstream>
-#include <map>
-
 #include "wrappers.hpp"
-
-enum e_query_type: uint8_t
-{
-	QUERYTYPE_SERVERINFO = 'i',
-	QUERYTYPE_SERVERRULES = 'r',
-	QUERYTYPE_SERVERPING = 'p',
-	QUERYTYPE_PLAYERLIST = 'c',
-	QUERYTYPE_DETAILPLAYERLIST = 'd',
-	QUERYTYPE_PSEUDORANDOM = 'p',
-
-	QUERYTYPES_COUNT = 6
-};
 
 class c_sqm
 {
@@ -64,7 +49,7 @@ public:
 			return;
 #endif
 		}
-		
+
 #endif
 		sockaddr_in address;
 		address.sin_family = AF_INET;
@@ -128,14 +113,43 @@ public:
 	/*
 	*	Send query and receive response
 	*/
-	std::stringstream query(e_query_type type, int timeout)
+	std::stringstream query(e_query_type type, int timeout, const char* rconcmd = NULL, const char* rconpass = NULL)
 	{
+		if(type >= QUERYTYPES_COUNT)
+		{
+#ifdef __cpp_exceptions
+			throw std::runtime_error("Invalid query type.");
+#else
+			return std::stringstream("");
+#endif
+		}
+
 		std::string packet {"SAMP"};
 
 		packet += translate_ip(_ip);
-		packet += _port & 0xFFu;
-		packet += _port >> 8 & 0xFFu;
-		packet += type;
+		packet += (char)(_port & 0xFFu);
+		packet += (char)((_port >> 8) & 0xFFu);
+		packet += e_type_to_rpc[type];
+
+		if(type == QUERYTYPE_RCON)
+		{
+			if(rconcmd && rconpass && rconcmd[0] && rconpass[0])
+			{
+				// TODO: needs to be re-tested
+				int16_t len = strlen(rconpass);
+				packet += (char)(len & 0xFFu);
+				packet += (char)((len >> 8) & 0xFFu);
+				packet += rconpass;
+
+				len = strlen(rconcmd);
+				packet += (char)(len & 0xFFu);
+				packet += (char)((len >> 8) & 0xFFu);
+				packet += rconcmd;
+
+				sendto(_socket, packet.c_str(), packet.size(), 0, &_address, sizeof(_address));
+			}
+			return std::stringstream("");
+		}
 
 		sendto(_socket, packet.c_str(), packet.size(), 0, &_address, sizeof(_address));
 		return receive(timeout);

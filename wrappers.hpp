@@ -1,5 +1,23 @@
 #pragma once
 
+#include <stdint.h>
+#include <sstream>
+#include <map>
+
+enum e_query_type: uint8_t
+{
+	QUERYTYPE_SERVERINFO = 0,
+	QUERYTYPE_SERVERRULES,
+	QUERYTYPE_PSEUDORANDOM,
+	QUERYTYPE_PLAYERLIST,
+	QUERYTYPE_DETAILPLAYERLIST,
+	QUERYTYPE_RCON,
+
+	QUERYTYPES_COUNT
+};
+
+static char e_type_to_rpc[QUERYTYPES_COUNT] = { 'i', 'r', 'p', 'c', 'd', 'x' };
+
 /*
 *	For fast read from sstream
 */
@@ -35,7 +53,12 @@ public:
 	}
 };
 
-struct s_server_info : private c_fast_reader
+struct s_query_base : public c_fast_reader
+{
+	e_query_type type;
+};
+
+struct s_server_info : public s_query_base
 {
 	uint8_t is_locked;
 	uint16_t players;
@@ -46,6 +69,8 @@ struct s_server_info : private c_fast_reader
 
 	s_server_info(std::stringstream &ss)
 	{
+		type = QUERYTYPE_SERVERINFO;
+
 		ss.seekg(11);
 		set_stream(ss);
 		is_locked = read_num<uint8_t>();
@@ -57,12 +82,14 @@ struct s_server_info : private c_fast_reader
 	}
 };
 
-struct s_server_ping : private c_fast_reader
+struct s_pseudo_random : public s_query_base
 {
 	uint8_t first_ping, second_ping, third_ping, fourth_ping;
 
-	s_server_ping(std::stringstream &ss)
+	s_pseudo_random(std::stringstream &ss)
 	{
+		type = QUERYTYPE_PSEUDORANDOM;
+		
 		ss.seekg(11);
 		set_stream(ss);
 		first_ping = read_num<uint8_t>();
@@ -72,12 +99,14 @@ struct s_server_ping : private c_fast_reader
 	}
 };
 
-struct s_server_rules : private c_fast_reader
+struct s_server_rules : public s_query_base
 {
 	std::map<std::string, std::string> rules;
 
 	s_server_rules(std::stringstream &ss)
 	{
+		type = QUERYTYPE_SERVERRULES;
+		
 		ss.seekg(11);
 		set_stream(ss);
 		uint16_t rule_count = read_num<uint16_t>();
@@ -90,12 +119,14 @@ struct s_server_rules : private c_fast_reader
 	}
 };
 
-struct s_player_list : private c_fast_reader
+struct s_player_list : public s_query_base
 {
 	std::map<std::string, int> players;
 
 	s_player_list(std::stringstream &ss)
 	{
+		type = QUERYTYPE_PLAYERLIST;
+		
 		ss.seekg(11);
 		set_stream(ss);
 		uint16_t players_count = read_num<uint16_t>();
@@ -109,7 +140,7 @@ struct s_player_list : private c_fast_reader
 	}
 };
 
-struct s_detailed_player_list : private c_fast_reader
+struct s_detailed_player_list : public s_query_base
 {
 	struct s_player_detail
 	{
@@ -123,6 +154,8 @@ struct s_detailed_player_list : private c_fast_reader
 
 	s_detailed_player_list(std::stringstream &ss)
 	{
+		type = QUERYTYPE_DETAILPLAYERLIST;
+		
 		ss.seekg(11);
 		set_stream(ss);
 
@@ -144,20 +177,5 @@ struct s_detailed_player_list : private c_fast_reader
 	~s_detailed_player_list()
 	{
 		delete[](details_list);
-	}
-};
-
-struct s_pseudo_random : private c_fast_reader
-{
-	uint8_t numbers[4];
-
-	s_pseudo_random(std::stringstream &ss)
-	{
-		ss.seekg(11);
-		set_stream(ss);
-		numbers[0] = read_num<uint8_t>();
-		numbers[1] = read_num<uint8_t>();
-		numbers[2] = read_num<uint8_t>();
-		numbers[3] = read_num<uint8_t>();
 	}
 };

@@ -186,6 +186,13 @@ public:
 	template<typename T> 
 	T handle(std::stringstream ss)
 	{
-		return T {ss};
+		if(std::is_pointer<T>::value)
+		{
+			return ( new decltype(std::remove_pointer<T>::type)( ss ) );
+		}
+		else
+		{
+			return T {ss};
+		}
 	}
 };

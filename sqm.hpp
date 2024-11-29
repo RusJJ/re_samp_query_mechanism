@@ -26,6 +26,7 @@ private:
 	u_short _port;
 
 public:
+	static inline int last_ping = 0;
 	static c_sqm *singleton()
 	{
 		static c_sqm instance;
@@ -166,6 +167,7 @@ public:
 
 		std::stringstream packet {};
 		time_t start_time = time(0);
+		last_ping = timeout * 1000;
 		while (time(0) - start_time < timeout)
 		{
 #ifdef _WIN32
@@ -177,7 +179,8 @@ public:
 			if (received_bytes > 11)
 			{
 				packet = std::stringstream(std::string(buffer, received_bytes));
-				start_time = time(0);
+				last_ping = (int)(time(0) - start_time);
+				break;
 			}
 		}
 		return packet;

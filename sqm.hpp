@@ -13,8 +13,10 @@
 	#include <unistd.h>
 
 	#define SOCKET int
+	#define Sleep(_t) usleep( (_t) * 1000)
 #endif
 
+#include <chrono>
 #include "wrappers.hpp"
 
 class c_sqm
@@ -168,18 +170,16 @@ public:
 		std::stringstream packet {};
 		time_t start_time = time(0);
 		last_ping = timeout * 1000;
+		auto start = std::chrono::system_clock::now();
 		while (time(0) - start_time < timeout)
 		{
-#ifdef _WIN32
 			Sleep(1); // 1ms
-#else
-			usleep(1000); // 1ms
-#endif
 			int received_bytes = recvfrom(_socket, buffer, sizeof(buffer), 0, &from, &from_length);
 			if (received_bytes > 11)
 			{
 				packet = std::stringstream(std::string(buffer, received_bytes));
-				last_ping = (int)(time(0) - start_time);
+				auto now = std::chrono::system_clock::now();
+				last_ping = (int)std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 				break;
 			}
 		}

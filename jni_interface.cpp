@@ -28,6 +28,11 @@ JNIEXPORT void JNICALL Java_net_rusjj_sampquery_NativeInterface_cleanQuery(JNIEn
     }
 }
 
+JNIEXPORT jint JNICALL Java_net_rusjj_sampquery_NativeInterface_getLastDelay(JNIEnv* env, jobject thiz)
+{
+    return c_sqm::last_ping;
+}
+
 JNIEXPORT jint JNICALL Java_net_rusjj_sampquery_NativeInterface_getPlayers(JNIEnv* env, jobject thiz, jlong query)
 {
     if(!query) return 0;

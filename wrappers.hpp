@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <sstream>
 #include <map>
+#include <cp1251_utf8.h>
 
 enum e_query_type: uint8_t
 {
@@ -51,6 +52,16 @@ public:
 		_ss->read(&result[0], result_length);
 		return result;
 	}
+
+	template<typename T = uint32_t>
+	std::string read_str_utf8(std::streampos pos = -1)
+	{
+		char s_cp1251[512], s_utf8[512];
+		_ss->read(&s_cp1251[0], result_length);
+		s_cp1251[result_length] = 0;
+		CP1251_UTF8(s_utf8, s_cp1251, result_length);
+		return std::string(s_utf8);
+	}
 };
 
 struct s_query_base : public c_fast_reader
@@ -76,9 +87,9 @@ struct s_server_info : public s_query_base
 		is_locked = read_num<uint8_t>();
 		players = read_num<uint16_t>();
 		max_players = read_num<uint16_t>();
-		host_name = read_str();
-		game_mode = read_str();
-		language = read_str();
+		host_name = read_str_utf8();
+		game_mode = read_str_utf8();
+		language = read_str_utf8();
 	}
 };
 
@@ -130,10 +141,12 @@ struct s_player_list : public s_query_base
 		ss.seekg(11);
 		set_stream(ss);
 		uint16_t players_count = read_num<uint16_t>();
+
 		if(players_count >= 100) return; // the server will not return anything, anyway
+
 		for (uint16_t i = 0; i < players_count; ++i)
 		{
-			std::string name = read_str<uint8_t>();
+			std::string name = read_str_utf8<uint8_t>();
 			int score = read_num<int>();
 			players.emplace(name, score);
 		}
@@ -166,7 +179,7 @@ struct s_detailed_player_list : public s_query_base
 		details_list = new s_player_detail[players_count];
 		for (uint16_t i = 0; i < players_count; ++i)
 		{
-			std::string name = read_str<uint8_t>();
+			std::string name = read_str_utf8<uint8_t>();
 			details_list[currentDetail].id = read_num<uint8_t>();
 			details_list[currentDetail].score = read_num<int>();
 			details_list[currentDetail].ping = read_num<int>();
@@ -176,6 +189,10 @@ struct s_detailed_player_list : public s_query_base
 	}
 	~s_detailed_player_list()
 	{
-		delete[](details_list);
+		if(details_list)
+		{
+			delete[](details_list);
+			details_list = 0;
+		}
 	}
 };

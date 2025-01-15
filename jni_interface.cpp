@@ -90,13 +90,13 @@ JNIEXPORT jint JNICALL Java_net_rusjj_sampquery_NativeInterface_getPlayerListCou
 
     return s_query->players.size();
 }
-JNIEXPORT jlong JNICALL Java_net_rusjj_sampquery_NativeInterface_getPlayersIterator(JNIEnv* env, jobject thiz, jlong query)
+/*JNIEXPORT jlong JNICALL Java_net_rusjj_sampquery_NativeInterface_getPlayersIterator(JNIEnv* env, jobject thiz, jlong query)
 {
     if(!query) return 0;
     s_player_list* s_query = (s_player_list*)query;
     if(s_query->type != QUERYTYPE_PLAYERLIST) return 0;
 
     return (jlong)s_query->players.begin();
-}
+}*/
 
 };

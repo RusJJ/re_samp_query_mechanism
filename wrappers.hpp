@@ -57,6 +57,7 @@ public:
 	std::string read_str_utf8(std::streampos pos = -1)
 	{
 		char s_cp1251[512], s_utf8[512];
+		T result_length = read_num<T>();
 		_ss->read(&s_cp1251[0], result_length);
 		s_cp1251[result_length] = 0;
 		CP1251_UTF8(s_utf8, s_cp1251, result_length);
